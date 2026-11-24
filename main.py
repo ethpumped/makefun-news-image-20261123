@@ -1,57 +1,58 @@
 #!/usr/bin/env python3
-"""THE DAWN LEDGER — entry program for news-image-20261123 (final2).
+"""Deliver THE DAWN LEDGER's front page (final2, news-image-20261123).
 
-The Dawn Ledger is a one-page newspaper of Monday 23 November 2026,
-drawn for @ethpumped: Nepal's Shah meets Modi in Delhi on the front,
-COP31 and India's record 720/9 beside it, 41 stories in all.
+THE DAWN LEDGER sums up Monday 23 November 2026 on a single peach
+dawn page: Shah of Nepal across the table from Modi in Delhi at the
+top, forty-one stories from seven regions underneath, and a date
+check that keeps every other day's news off the page.
 
-This program does one small job, with the standard library only: it
-copies the finished entry.png that sits next to it into the output
-directory, after checking the copy source is exactly the file that
-was measured and hashed when the entry was built. No Pillow, no
-network, no surprises — two runs produce byte-identical output.
+The entry image is finished long before this program runs. All the
+program does — standard library only, nothing imported beyond
+hashlib, os and sys — is verify that entry.png beside it is still
+the exact measured file, then copy it into the output directory.
+Run it twice and the output bytes do not change.
 """
 
 import hashlib
 import os
 import sys
 
-EXPECTED_BYTES = 120408
-EXPECTED_SHA256 = "d61025feb353f0313615317c63b2878d7819eb50c9dbc57215a09bbc5101fd28"
-PNG_HEADER = b"\x89PNG\r\n\x1a\n"
-HARD_CAP = 1048576  # the competition's 1 MiB ceiling
+MEASURED_BYTES = 120408
+MEASURED_SHA256 = "d61025feb353f0313615317c63b2878d7819eb50c9dbc57215a09bbc5101fd28"
+MAGIC = b"\x89PNG\r\n\x1a\n"
+CEILING = 1048576
 
 
-def fail(msg):
-    # Refusals go to stderr so a failed run never looks like a quiet success.
-    sys.stderr.write("entry refused: %s\n" % msg)
-    sys.exit(1)
+def die(reason):
+    # A stopped entry must say so out loud; silence would look like success.
+    sys.stderr.write("THE DAWN LEDGER entry stopped: %s\n" % reason)
+    raise SystemExit(1)
 
 
-def run():
-    here = os.path.dirname(os.path.abspath(__file__))
-    source = os.path.join(here, "entry.png")
+def deliver():
+    folder = os.path.dirname(os.path.abspath(__file__))
+    with open(os.path.join(folder, "entry.png"), "rb") as fh:
+        page = fh.read()
+
+    if page[:8] != MAGIC:
+        die("entry.png is not a PNG file")
+    if len(page) != MEASURED_BYTES:
+        die("entry.png measures %d bytes, not %d" % (len(page), MEASURED_BYTES))
+    if len(page) > CEILING:
+        die("entry.png passes the competition's 1 MiB ceiling")
+    if hashlib.sha256(page).hexdigest() != MEASURED_SHA256:
+        die("entry.png hash differs from the measured front page")
+
     out_dir = os.environ.get("MAKEFUN_OUTPUT_DIR") or "/output"
-    target = os.path.join(out_dir, "entry.png")
-
-    with open(source, "rb") as fh:
-        blob = fh.read()
-
-    if not blob.startswith(PNG_HEADER):
-        fail("entry.png does not start with the PNG magic bytes")
-    if len(blob) > HARD_CAP:
-        fail("entry.png is %d bytes, over the 1 MiB cap" % len(blob))
-    if len(blob) != EXPECTED_BYTES:
-        fail("entry.png is %d bytes; expected %d" % (len(blob), EXPECTED_BYTES))
-    digest = hashlib.sha256(blob).hexdigest()
-    if digest != EXPECTED_SHA256:
-        fail("entry.png sha256 %s does not match the built file" % digest)
-
     os.makedirs(out_dir, exist_ok=True)
-    with open(target, "wb") as fh:
-        fh.write(blob)
-    sys.stderr.write("wrote %s (%d bytes, sha256 %s)\n" % (target, len(blob), digest))
+    destination = os.path.join(out_dir, "entry.png")
+    with open(destination, "wb") as fh:
+        fh.write(page)
+    sys.stderr.write(
+        "delivered %s — %d bytes, sha256 %s\n"
+        % (destination, len(page), MEASURED_SHA256)
+    )
 
 
 if __name__ == "__main__":
-    run()
+    deliver()
