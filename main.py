@@ -17,8 +17,8 @@ import hashlib
 import os
 import sys
 
-MEASURED_BYTES = 120408
-MEASURED_SHA256 = "d61025feb353f0313615317c63b2878d7819eb50c9dbc57215a09bbc5101fd28"
+MEASURED_BYTES = 119922
+MEASURED_SHA256 = "5414d4096900e1281268e86e0a0d67015cba5e7572dc6c2051f5acc51fac9625"
 MAGIC = b"\x89PNG\r\n\x1a\n"
 CEILING = 1048576
 
@@ -36,6 +36,8 @@ def deliver():
 
     if page[:8] != MAGIC:
         die("entry.png is not a PNG file")
+    # The measured values above were taken from the final audited page;
+    # any drift means the wrong file is being delivered.
     if len(page) != MEASURED_BYTES:
         die("entry.png measures %d bytes, not %d" % (len(page), MEASURED_BYTES))
     if len(page) > CEILING:
